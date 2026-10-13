@@ -1,0 +1,1694 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>خضرلي - خضروات وفواكه طازجة</title>
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<style>
+:root{
+  --green:#28a745;
+  --green-dark:#1d7a33;
+  --bg:#f6fbf7;
+  --card:#ffffff;
+  --muted:#6b7280;
+  --blue:#007bff;
+  --blue-dark:#0056b3;
+  --yellow:#ffc107;
+  --orange:#fd7e14;
+  --red:#dc3545;
+  font-family: "Segoe UI", Tahoma, Arial;
+}
+body{margin:0;background:var(--bg);direction:rtl;padding:0;padding-bottom:70px;}
+
+/* PRELOADER STYLES */
+#preloader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: white; z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+    flex-direction: column; transition: opacity 0.5s ease;
+}
+#preloader img { width: 200px; height: auto; border-radius: 12px; }
+.loader {
+    border: 4px solid #f3f3f3; border-top: 4px solid var(--green);
+    border-radius: 50%; width: 30px; height: 30px;
+    animation: spin 1s linear infinite; margin-top: 20px;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* LANDING PAGE STYLES */
+#landingPage {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--bg); z-index: 9998; display: none;
+    display: grid; place-items: center; padding: 20px; box-sizing: border-box;
+}
+.landing-content {
+    background: var(--card); padding: 30px 25px; border-radius: 16px;
+    max-width: 400px; width: 100%; box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    text-align: center; margin: auto; box-sizing: border-box;
+}
+.landing-content h2 { color: var(--green-dark); margin-bottom: 15px; font-size: 1.4rem; }
+.landing-form-group { margin-bottom: 18px; text-align: right; }
+.landing-form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px; }
+.landing-form-group input, .landing-form-group select {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #ccc;
+    box-sizing: border-box; font-family: inherit; font-size: 15px;
+    direction: rtl; text-align: right; height: 48px;
+    transition: border-color 0.3s ease;
+}
+.landing-form-group input:focus, .landing-form-group select:focus {
+    outline: none; border-color: var(--green);
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+.landing-form-group .phone-input { direction:ltr; text-align:left; }
+.landing-btn-group { display: flex; gap: 10px; justify-content: space-between; margin-top: 15px; }
+.landing-btn-group .btn {
+    flex: 1; font-size: 15px; padding: 12px 8px; height: 48px;
+    border-radius: 10px; font-weight: 600; transition: all 0.3s ease;
+    border: none; cursor: pointer;
+}
+.primary-btn { background: var(--green); color: white; }
+.primary-btn:hover { background: var(--green-dark); }
+.secondary-btn { background: #f0f0f0; color: #333; border: 1px solid #ddd; }
+.secondary-btn:hover { background: #e0e0e0; }
+#landingPage p { color: var(--muted); margin-bottom: 25px; font-size: 14px; line-height: 1.5; }
+
+/* HEADER */
+header{
+  display:flex; flex-direction: column; padding:14px 20px 0;
+  background:linear-gradient(90deg,var(--green-dark),var(--green));
+  color:white; box-shadow:0 4px 12px rgba(0,0,0,0.12);
+  position:sticky; top:0; z-index:40;
+}
+.header-top{ display: flex; align-items: center; gap: 12px; padding-bottom: 14px; }
+
+/* MAIN */
+main{padding:16px;max-width:1100px;margin:auto}
+
+/* ✅ تعديل: بطاقة المنتج أصغر ومتوسطة */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:10px;
+}
+.card{
+  background:var(--card);
+  padding:8px;
+  border-radius:12px;
+  box-shadow:0 3px 10px rgba(0,0,0,0.06);
+  transition: transform 0.3s ease;
+  position: relative;
+}
+.card:hover { transform: translateY(-3px); }
+
+.thumb{
+  width: 100%; aspect-ratio: 1 / 1;
+  border-radius:9px; background:#e8fbee;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--green-dark); font-size:20px;
+  margin-bottom:6px; overflow: hidden;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+
+.title{ font-weight:700; margin-bottom: 2px; font-size:13px; }
+.desc{ font-size:11px; color:var(--muted); margin-bottom: 4px; height: 14px; overflow: hidden; }
+.price{ font-weight:700; color:var(--green-dark); font-size: 14px; }
+.btn{
+  background:var(--green); color:white; border:0;
+  padding:6px 10px; border-radius:8px; cursor:pointer;
+  font-weight:600; margin-top:6px; width:100%;
+  transition: background 0.3s ease; font-size:12px;
+}
+.btn:hover { background:var(--green-dark); }
+.out-of-stock-overlay {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 12px;
+    display: flex; justify-content: center; align-items: center;
+    color: white; font-size: 14px; font-weight: bold;
+    text-align: center; pointer-events: none; z-index: 5;
+}
+
+/* SEARCH AND SELECT */
+.search-and-select-container { display: flex; gap: 8px; margin-bottom: 10px; }
+.delivery-area-select-box { width: 45%; flex-shrink: 0; }
+.delivery-area-select-box.hidden { display: none; }
+.delivery-area-select-box select {
+    width: 100%; padding: 8px 10px; border-radius: 10px;
+    border: 1px solid #ffffff55; background: #ffffff22; color: white;
+    box-sizing: border-box; font-family: inherit; font-size: 13px;
+    margin: 0; appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-repeat: no-repeat; background-position: left 10px center; padding-left: 30px;
+}
+.delivery-area-select-box select option { background: var(--green-dark); color: white; }
+.search-box { width: 55%; flex-grow: 1; }
+.search-box.full-width { width: 100%; }
+.search-box input{
+  margin-bottom:0; padding:10px; border-radius:10px;
+  border:1px solid #ddd; font-size:14px; width: 100%;
+  background: white; color: #333;
+}
+
+/* CATEGORIES STYLES */
+.categories-container{
+  display:flex; gap:8px; overflow-x:auto;
+  padding-bottom:14px; margin-bottom:0;
+}
+.category-chip{
+  padding:8px 16px; border-radius:20px; cursor:pointer;
+  white-space:nowrap; font-weight:600; font-size:14px;
+  background:#ffffff33; color:white; border:1px solid #ffffff66;
+  transition:0.2s;
+}
+.category-chip.active, .category-chip:hover{
+  background:var(--card); color:var(--green-dark); border-color:var(--card);
+}
+
+/* BOTTOM NAV BAR */
+.bottom-nav {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background: white; display: flex; justify-content: space-around;
+    align-items: center; padding: 8px 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    z-index: 100; border-top: 1px solid #eee;
+}
+.nav-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; cursor: pointer; padding: 8px 12px;
+    border-radius: 12px; transition: all 0.3s ease;
+    color: var(--muted); flex: 1; max-width: 100px; position: relative;
+}
+.nav-item.active { color: var(--green); background: rgba(40, 167, 69, 0.1); }
+.nav-item svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; }
+.nav-item span { font-size: 12px; font-weight: 600; }
+
+/* Cart Badge */
+.cart-badge {
+    position: absolute; top: -2px; left: 50%;
+    transform: translateX(8px);
+    background: #ff2d2d; color: white;
+    font-size: 11px; font-weight: bold;
+    min-width: 20px; height: 20px;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 5px; border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(255, 45, 45, 0.5);
+    animation: badgePulse 1.5s infinite;
+}
+@keyframes badgePulse {
+    0%, 100% { transform: translateX(8px) scale(1); box-shadow: 0 2px 6px rgba(255, 45, 45, 0.5); }
+    50% { transform: translateX(8px) scale(1.15); box-shadow: 0 2px 12px rgba(255, 45, 45, 0.8); }
+}
+
+/* ✅ طبقة السلة الجديدة (Bottom Sheet) */
+.cart-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 500;
+    opacity: 0; visibility: hidden; transition: all 0.3s ease;
+}
+.cart-overlay.open { opacity: 1; visibility: visible; }
+
+.cart-sheet {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    max-height: 85vh; background: white;
+    border-radius: 24px 24px 0 0;
+    z-index: 501;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+}
+.cart-sheet.open { transform: translateY(0); }
+
+.cart-handle {
+    width: 40px; height: 4px; background: #d1d5db;
+    border-radius: 4px; margin: 12px auto 8px;
+}
+
+.cart-header {
+    padding: 8px 20px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+}
+.cart-header h3 {
+    margin: 0; font-size: 18px; color: var(--green-dark);
+    display: flex; align-items: center; gap: 8px;
+}
+.cart-header .item-count {
+    background: var(--green); color: white;
+    font-size: 12px; padding: 2px 10px;
+    border-radius: 12px; font-weight: 600;
+}
+.close-cart-btn {
+    background: #f3f4f6; border: none;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; color: #6b7280;
+    transition: all 0.2s;
+}
+.close-cart-btn:hover { background: #e5e7eb; color: #374151; }
+
+.cart-body {
+    padding: 16px 20px;
+    flex: 1; overflow-y: auto;
+    max-height: 50vh;
+}
+
+.cart-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+    gap: 12px;
+}
+.cart-item-img {
+    width: 50px; height: 50px; border-radius: 10px;
+    object-fit: cover; flex-shrink: 0;
+}
+.cart-item-info { flex: 1; min-width: 0; }
+.cart-item-info strong { display: block; font-size: 14px; margin-bottom: 4px; }
+.cart-item-info span { font-size: 13px; color: var(--muted); }
+.cart-item-qty {
+    display: flex; align-items: center; gap: 4px;
+    background: #f9fafb; border-radius: 20px; padding: 2px;
+}
+.qty-btn {
+    width: 28px; height: 28px;
+    border: none; border-radius: 50%;
+    background: white; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: bold;
+    color: var(--green-dark);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+}
+.qty-btn:hover { background: var(--green); color: white; }
+.qty-value { font-weight: bold; padding: 0 8px; font-size: 14px; }
+
+.cart-empty {
+    text-align: center; padding: 40px 20px; color: var(--muted);
+}
+.cart-empty svg { width: 60px; height: 60px; stroke: #d1d5db; margin-bottom: 12px; }
+
+.cart-footer {
+    padding: 16px 20px 24px;
+    border-top: 1px solid #f0f0f0;
+    background: white;
+    border-radius: 0 0 24px 24px;
+}
+
+.cart-summary-row {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; font-size: 14px;
+}
+.cart-summary-row.total {
+    font-weight: bold; font-size: 17px;
+    color: var(--green-dark); padding-top: 10px;
+    border-top: 1px solid #f0f0f0; margin-top: 6px;
+}
+
+.checkout-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(90deg, var(--green-dark), var(--green));
+    color: white; border: none; border-radius: 14px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    margin-top: 12px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+.checkout-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4); }
+.checkout-btn:disabled { background: #d1d5db; cursor: not-allowed; box-shadow: none; }
+
+/* CHECKOUT STEPS */
+.checkout-panel {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: white; z-index: 600;
+    overflow-y: auto; display: none; flex-direction: column;
+}
+.checkout-header {
+    background: linear-gradient(90deg, var(--green-dark), var(--green));
+    color: white; padding: 16px;
+    display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 10;
+}
+.back-btn {
+    background: rgba(255,255,255,0.2); border: none;
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 20px; color: white;
+}
+.step-title { font-size: 18px; font-weight: 600; }
+.step-content { padding: 20px; flex: 1; overflow-y: auto; }
+.step-footer {
+    padding: 16px; border-top: 1px solid #dee2e6;
+    background: white; display: flex; gap: 12px;
+    position: sticky; bottom: 0;
+}
+.step-footer .btn { flex: 1; }
+
+/* Payment Options */
+.payment-methods { display: flex; flex-direction: column; gap: 12px; }
+.payment-option {
+    display: flex; align-items: center; gap: 15px;
+    padding: 15px; border: 2px solid #e9ecef;
+    border-radius: 16px; cursor: pointer; transition: 0.2s;
+}
+.payment-option.selected { border-color: var(--green); background: #e8f5e9; }
+.payment-icon {
+    width: 45px; height: 45px;
+    object-fit: contain; border-radius: 8px;
+}
+.payment-name { font-weight: 600; font-size: 16px; }
+
+/* Map */
+#map {
+    height: 350px; width: 100%;
+    border-radius: 16px; margin-bottom: 16px;
+    background: #e9ecef; z-index: 1;
+}
+.leaflet-control-attribution { display: none !important; }
+.leaflet-bottom.leaflet-right { display: none !important; }
+.location-info {
+    background: #f1f3f5; padding: 12px;
+    border-radius: 12px; margin-top: 12px; font-size: 13px;
+}
+
+/* Order Summary */
+.order-summary-card {
+    background: #f8f9fa; border-radius: 16px;
+    padding: 16px; margin-bottom: 16px;
+}
+.summary-row {
+    display: flex; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid #e9ecef;
+}
+.summary-row.total {
+    font-weight: bold; font-size: 18px;
+    color: var(--green); border-bottom: none;
+    margin-top: 8px; padding-top: 12px;
+}
+.items-list { max-height: 300px; overflow-y: auto; }
+.item-row {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; font-size: 14px;
+}
+
+/* SUCCESS MESSAGE */
+.success-message {
+  display: none; position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.8); z-index: 700;
+  justify-content: center; align-items: center;
+}
+.success-content {
+  background: white; padding: 30px; border-radius: 15px;
+  text-align: center; max-width: 400px; width: 90%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.success-icon { font-size: 60px; color: var(--green); margin-bottom: 20px; }
+
+/* MY ORDERS PAGE */
+.orders-page {
+    padding: 16px; max-width: 600px;
+    margin: 0 auto; padding-bottom: 80px;
+}
+.order-card {
+    background: white; border-radius: 16px;
+    padding: 16px; margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-right: 4px solid;
+}
+.order-card.pending { border-color: var(--yellow); }
+.order-card.preparing { border-color: var(--orange); }
+.order-card.delivering { border-color: var(--blue); }
+.order-card.delivered { border-color: var(--green-dark); }
+.order-card.cancelled { border-color: var(--red); }
+
+.order-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 12px;
+    flex-wrap: wrap; gap: 8px;
+}
+.order-id {
+    font-weight: bold; color: var(--green-dark);
+    background: #e8f5e9; padding: 4px 10px;
+    border-radius: 20px; font-size: 13px;
+}
+.order-status {
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+}
+.status-pending { background: #fff3cd; color: #856404; }
+.status-preparing { background: #ffe5d0; color: #fd7e14; }
+.status-delivering { background: #cce5ff; color: #004085; }
+.status-delivered { background: #d4edda; color: #155724; }
+.status-cancelled { background: #f8d7da; color: #721c24; }
+
+.order-items {
+    margin: 10px 0; font-size: 14px;
+    color: #666; max-height: 60px; overflow-y: auto;
+}
+.order-total {
+    display: flex; justify-content: space-between;
+    font-weight: bold; margin-top: 10px;
+    padding-top: 10px; border-top: 1px solid #eee;
+}
+
+/* ✅ تعديل: شريط تتبع الطلب كلاسيكي مع SVG */
+.tracking-container {
+    margin: 20px 0 16px;
+    padding: 24px 8px 16px;
+    background: #fafbfc;
+    border-radius: 12px;
+    border: 1px solid #eef0f2;
+}
+
+.current-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.current-status-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    flex-shrink: 0;
+}
+
+.current-status-icon-wrap svg {
+    width: 22px;
+    height: 22px;
+    stroke: #16a34a;
+    stroke-width: 2;
+    fill: none;
+}
+
+.current-status-text { flex: 1; }
+.current-status-text h4 {
+    margin: 0 0 3px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+}
+.current-status-text p {
+    margin: 0;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.tracking-bar-classic {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    padding: 0 4px;
+}
+
+.tracking-line-bg {
+    position: absolute;
+    top: 18px;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: #e5e7eb;
+    z-index: 1;
+}
+
+.tracking-line-fill {
+    position: absolute;
+    top: 18px;
+    right: 10%;
+    height: 2px;
+    background: #16a34a;
+    z-index: 2;
+    transition: width 0.6s ease;
+}
+
+.tracking-step-classic {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 3;
+}
+
+.step-dot-classic {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.step-dot-classic svg {
+    width: 16px;
+    height: 16px;
+    stroke: #9ca3af;
+    stroke-width: 2.5;
+    fill: none;
+    transition: all 0.3s ease;
+}
+
+.step-dot-classic.completed {
+    background: #16a34a;
+    border-color: #16a34a;
+}
+.step-dot-classic.completed svg { stroke: white; }
+
+.step-dot-classic.current {
+    background: white;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15);
+}
+.step-dot-classic.current svg { stroke: #16a34a; }
+
+.step-label-classic {
+    font-size: 10px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-align: center;
+    line-height: 1.3;
+    transition: color 0.3s ease;
+    max-width: 60px;
+}
+.step-label-classic.active { color: #16a34a; }
+
+/* Cancel button */
+.cancel-order-btn {
+    background: var(--red); color: white;
+    border: none; padding: 10px;
+    border-radius: 8px; width: 100%;
+    font-weight: 600; cursor: pointer;
+    transition: background 0.3s ease;
+    margin-top: 10px;
+}
+.cancel-order-btn:hover { background: #c82333; }
+
+.close-btn{
+  background:none; border:none; color:white;
+  font-size:24px; cursor:pointer; padding:0;
+  width:30px; height:30px;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.hidden { display: none !important; }
+
+/* Toast */
+.toast-msg {
+    position: fixed; bottom: 90px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--green-dark); color: white;
+    padding: 10px 20px; border-radius: 40px;
+    font-size: 14px; z-index: 800; white-space: nowrap;
+    animation: fadeInOut 2s ease;
+}
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}
+
+@media (max-width: 480px) {
+    .landing-content { padding: 25px 20px; max-width: 100%; }
+    .step-label-classic { font-size: 9px; max-width: 50px; }
+    .step-dot-classic { width: 32px; height: 32px; }
+    .tracking-line-bg, .tracking-line-fill { top: 16px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+</style>
+</head>
+
+<body>
+
+<div id="preloader">
+    <img src="https://www2.0zz0.com/2025/12/09/18/567526201.png" alt="خضرلي">
+    <div class="loader"></div>
+</div>
+
+<div id="landingPage">
+    <div class="landing-content">
+        <h2>أهلاً بك في خضرلي 🥬</h2>
+        <p>الرجاء إدخال رقم هاتفك واختيار منطقة التوصيل لبدء الطلب.</p>
+
+        <div class="landing-form-group">
+            <label for="landingPhoneNumber">رقم هاتفك</label>
+            <input type="tel" id="landingPhoneNumber" class="phone-input" 
+                   placeholder="مثال: 0912345678" 
+                   maxlength="10">
+        </div>
+        
+        <div class="landing-form-group">
+            <label for="landingAreaSelect">منطقة التوصيل</label>
+            <select id="landingAreaSelect">
+            </select>
+        </div>
+        
+        <div class="landing-btn-group">
+            <button class="btn primary-btn" id="startOrdering">بدء الطلب</button>
+            <button class="btn secondary-btn" id="browseMenu">تصفح المنتجات</button>
+        </div>
+    </div>
+</div>
+
+<header id="mainHeader" style="display: none;">
+    <div class="header-top">
+      <div style="font-size:17px;font-weight:700">🥬 خضرلي</div>
+      <div style="font-size:13px;opacity:.9">خضروات وفواكه طازجة</div>
+    </div>
+
+    <div class="search-and-select-container">
+        <div class="delivery-area-select-box" id="areaSelectBox">
+            <select id="headerAreaSelect">
+            </select>
+        </div>
+        
+        <div class="search-box" id="searchBoxContainer">
+            <input type="text" id="searchBar" placeholder="بحث ..." onkeyup="filterProducts()">
+        </div>
+    </div>
+    
+    <div class="categories-container" id="categoriesContainer">
+    </div>
+</header>
+
+<main id="mainContent" style="display: none;">
+    <div class="grid" id="products"></div>
+</main>
+
+<main id="ordersContent" style="display: none;" class="orders-page">
+    <h2 style="color: var(--green-dark); margin-bottom: 20px;">طلباتي</h2>
+    <div id="ordersList"></div>
+</main>
+
+<!-- Bottom Navigation Bar -->
+<div class="bottom-nav" id="bottomNav" style="display: none;">
+    <div class="nav-item" id="navMenu" onclick="showMenu()">
+        <svg viewBox="0 0 24 24">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+        <span>المنيو</span>
+    </div>
+    <div class="nav-item" id="navCart" onclick="openCart()">
+        <svg viewBox="0 0 24 24">
+            <circle cx="9" cy="21" r="1"/>
+            <circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>
+        </svg>
+        <span>السلة</span>
+        <div class="cart-badge" id="cartBadge" style="display: none;">0</div>
+    </div>
+    <div class="nav-item" id="navOrders" onclick="showOrders()">
+        <svg viewBox="0 0 24 24">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span>طلباتي</span>
+    </div>
+</div>
+
+<!-- ✅ طبقة السلة الجديدة (Cart Overlay + Bottom Sheet) -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCartSheet()"></div>
+
+<div class="cart-sheet" id="cartSheet">
+    <div class="cart-handle"></div>
+    
+    <div class="cart-header">
+        <h3>
+            🛒 سلة التسوق
+            <span class="item-count" id="cartItemCount">0 منتج</span>
+        </h3>
+        <button class="close-cart-btn" onclick="closeCartSheet()">✕</button>
+    </div>
+    
+    <div class="cart-body" id="cartItems">
+        <!-- يتم ملؤها ديناميكياً -->
+    </div>
+    
+    <div class="cart-footer">
+        <div class="cart-summary-row">
+            <span>المجموع الفرعي:</span>
+            <span id="subtotal">0.00 دينار</span>
+        </div>
+        <div class="cart-summary-row total">
+            <span>الإجمالي:</span>
+            <span id="finalTotal">0.00 دينار</span>
+        </div>
+        <button class="checkout-btn" id="checkoutBtn" onclick="startCheckout()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            إتمام الطلب
+        </button>
+    </div>
+</div>
+
+<!-- Checkout Panel (Steps) -->
+<div id="checkoutPanel" class="checkout-panel">
+    <div class="checkout-header">
+        <button class="back-btn" onclick="closeCheckout()">→</button>
+        <span class="step-title" id="stepTitle">الخطوة 1 من 4</span>
+    </div>
+    <div id="stepContainer" class="step-content"></div>
+    <div class="step-footer">
+        <button class="btn" id="backStepBtn" onclick="prevStep()" style="display: none; background:#6c757d; color:white;">السابق</button>
+        <button class="btn" id="nextStepBtn" onclick="nextStep()">التالي</button>
+    </div>
+</div>
+
+<!-- Success Message -->
+<div class="success-message" id="successMessage">
+    <div class="success-content">
+        <div class="success-icon">✓</div>
+        <h3 style="color: var(--green-dark); margin-bottom: 10px;">تم إرسال طلبك بنجاح!</h3>
+        <p style="color: var(--muted); margin-bottom: 20px;">يمكنك متابعة حالة الطلب من صفحة "طلباتي"</p>
+        <button class="btn" onclick="closeSuccessMessage()" style="width: auto; padding: 10px 30px;">موافق</button>
+    </div>
+</div>
+
+<script>
+/* ===== Firebase Configuration ===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAevaRdn2xbAK9nyDZNd67e7lEg9D7hHP8",
+  authDomain: "khaderli.firebaseapp.com",
+  databaseURL: "https://khaderli-default-rtdb.firebaseio.com",
+  projectId: "khaderli",
+  storageBucket: "khaderli.firebasestorage.app",
+  messagingSenderId: "213343244426",
+  appId: "1:213343244426:web:3ce14ac05a6d00b9399d73"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ===== Global Constants ===== */
+const UNIFIED_IMAGE = "https://up6.cc/2025/10/176460585993361.jpg";
+
+/* ===== Global State ===== */
+let cart = {};
+let allProducts = {};
+let allCategories = ["الكل"];
+let allAreas = {};
+let allPaymentMethods = {};
+let activeCategory = "الكل";
+let userArea = "";
+let userPhone = "";
+let isBrowseMode = false;
+let productOrder = [];
+let map = null;
+let marker = null;
+
+/* ===== Checkout State ===== */
+let checkoutData = {
+    step: 1,
+    orderType: "delivery",
+    selectedLocation: null,
+    locationAddress: "",
+    paymentMethod: null,
+    notes: ""
+};
+let tempCart = {};
+
+/* Green Marker Icon */
+const greenIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+/* ===== Load Firebase Data ===== */
+function loadData() {
+    db.ref('products').on('value', snapshot => {
+        allProducts = snapshot.val() || {};
+        const productsArray = Object.keys(allProducts).map(key => {
+            return { id: key, ...allProducts[key] };
+        });
+        
+        db.ref('productOrder').on('value', orderSnapshot => {
+            productOrder = orderSnapshot.val() || [];
+            const categoriesSet = new Set();
+            productsArray.forEach(p => {
+                if (p.category) categoriesSet.add(p.category);
+            });
+            allCategories = ["الكل", ...categoriesSet];
+            renderCategories();
+            renderProducts();
+        });
+    });
+
+    db.ref('deliveryAreas').on('value', snapshot => {
+        allAreas = snapshot.val() || {};
+        initLandingAreaSelect();
+        initHeaderAreaSelect();
+    });
+    
+    db.ref('paymentMethods').on('value', snapshot => {
+        allPaymentMethods = snapshot.val() || {};
+    });
+}
+
+/* ===== Preloader & Landing Page ===== */
+window.onload = function() {
+    loadData();
+    
+    const savedPhone = localStorage.getItem('userPhone');
+    const savedArea = localStorage.getItem('userArea');
+    if (savedPhone) {
+        document.getElementById('landingPhoneNumber').value = savedPhone;
+    }
+    if (savedArea) {
+        userArea = savedArea; 
+    }
+    
+    document.getElementById('preloader').style.opacity = '0';
+    setTimeout(() => {
+        document.getElementById('preloader').style.display = 'none';
+        document.getElementById('landingPage').style.display = 'grid';
+    }, 500);
+};
+
+function initLandingAreaSelect() {
+    const landingAreaSelect = document.getElementById("landingAreaSelect");
+    const currentSelectedArea = userArea || landingAreaSelect.value; 
+    landingAreaSelect.innerHTML = '<option value="" disabled selected>اختر منطقة التوصيل</option>';
+    
+    Object.keys(allAreas).forEach(areaKey => {
+        const area = allAreas[areaKey];
+        const option = document.createElement("option");
+        option.value = area.name;
+        option.textContent = area.name;
+        landingAreaSelect.appendChild(option);
+    });
+    
+    if (currentSelectedArea) {
+        landingAreaSelect.value = currentSelectedArea;
+    }
+}
+
+document.getElementById("startOrdering").onclick = function() {
+    const landingAreaSelect = document.getElementById("landingAreaSelect");
+    const landingPhoneNumberInput = document.getElementById("landingPhoneNumber");
+    
+    const area = landingAreaSelect.value;
+    const phone = landingPhoneNumberInput.value.trim();
+
+    if (!area) {
+        alert("الرجاء اختيار منطقة التوصيل.");
+        landingAreaSelect.focus();
+        return;
+    }
+    if (!phone || phone.length < 10) {
+        alert("الرجاء إدخال رقم هاتف صحيح مكون من 10 أرقام.");
+        landingPhoneNumberInput.focus();
+        return;
+    }
+
+    userArea = area;
+    userPhone = phone;
+    isBrowseMode = false;
+    
+    localStorage.setItem('userPhone', userPhone);
+    localStorage.setItem('userArea', userArea);
+
+    enterMainApp(false); 
+};
+
+document.getElementById("browseMenu").onclick = function() {
+    userArea = ""; 
+    userPhone = "";
+    isBrowseMode = true;
+    enterMainApp(true); 
+};
+
+function enterMainApp(browseMode = false) {
+    document.getElementById('landingPage').style.display = 'none';
+    document.getElementById('mainHeader').style.display = 'flex';
+    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('bottomNav').style.display = 'flex';
+    document.getElementById('ordersContent').style.display = 'none';
+
+    const areaSelectBox = document.getElementById('areaSelectBox');
+    const searchBoxContainer = document.getElementById('searchBoxContainer');
+    
+    if (browseMode) {
+        areaSelectBox.classList.add('hidden');
+        searchBoxContainer.classList.add('full-width');
+    } else {
+        areaSelectBox.classList.remove('hidden');
+        searchBoxContainer.classList.remove('full-width');
+    }
+
+    initHeaderAreaSelect();
+    renderProducts();
+    renderCategories();
+    renderCart();
+    setActiveNav('menu');
+}
+
+/* ===== Header Area Select ===== */
+function initHeaderAreaSelect() {
+    const headerAreaSelect = document.getElementById("headerAreaSelect");
+    headerAreaSelect.innerHTML = "";
+
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "اختر المنطقة";
+    headerAreaSelect.appendChild(defaultOption);
+
+    Object.values(allAreas).forEach(area => {
+        const option = document.createElement("option");
+        option.value = area.name;
+        option.textContent = area.name;
+        headerAreaSelect.appendChild(option);
+    });
+
+    if (userArea) {
+        headerAreaSelect.value = userArea;
+    }
+}
+
+/* ===== Products & Categories ===== */
+function renderProducts(searchQuery = ""){
+    const box = document.getElementById("products");
+    box.innerHTML = "";
+    const query = searchQuery.toLowerCase();
+
+    let productsArray = Object.keys(allProducts).map(key => {
+        return { id: key, ...allProducts[key] };
+    }).filter(p => p && p.name && p.category && p.price);
+
+    if (productOrder && productOrder.length > 0) {
+        const orderMap = {};
+        productOrder.forEach((id, index) => {
+            orderMap[id] = index;
+        });
+        
+        productsArray.sort((a, b) => {
+            const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : Infinity;
+            const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : Infinity;
+            return orderA - orderB;
+        });
+    }
+
+    const filteredProducts = productsArray.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(query) || (p.desc || '').toLowerCase().includes(query);
+        const matchesCategory = activeCategory === "الكل" || p.category === activeCategory;
+        return matchesSearch && matchesCategory;
+    });
+
+    if(filteredProducts.length === 0){
+        box.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;">لا توجد منتجات تطابق البحث أو التصنيف المحدد.</p>';
+        return;
+    }
+
+    filteredProducts.forEach(p=>{
+        const isOutOfStock = p.outOfStock;
+        box.innerHTML += `
+            <div class="card" ${isOutOfStock ? 'style="opacity:0.6; pointer-events:none;"' : ''}>
+                <div class="thumb">
+                    <img src="${p.image || UNIFIED_IMAGE}" alt="${p.name}" loading="lazy">
+                </div>
+                <div class="title">${p.name}</div>
+                <div class="desc">${p.desc || ''}</div>
+                <div class="price">${p.price}.00 دينار</div>
+                <button class="btn" onclick="addToCart('${p.id}')" ${isOutOfStock ? 'disabled' : ''}>${isBrowseMode ? 'اضغط للطلب' : 'إضافة للسلة'}</button>
+                ${isOutOfStock ? '<div class="out-of-stock-overlay">نفدت الكمية</div>' : ''}
+            </div>
+        `;
+    });
+}
+
+function filterProducts(){
+    const searchQuery = document.getElementById("searchBar").value;
+    renderProducts(searchQuery);
+}
+
+function renderCategories(){
+    const container = document.getElementById("categoriesContainer");
+    container.innerHTML = "";
+
+    allCategories.forEach(cat => {
+        const isActive = cat === activeCategory ? "active" : "";
+        container.innerHTML += `
+            <div class="category-chip ${isActive}" onclick="setCategory('${cat}')">
+                ${cat}
+            </div>
+        `;
+    });
+}
+
+function setCategory(category){
+    activeCategory = category;
+    renderCategories();
+    filterProducts();
+}
+
+/* ===== Cart Logic ===== */
+function addToCart(id){
+    if (isBrowseMode) {
+        alert("الرجاء إدخال رقم هاتفك ومنطقة التوصيل لبدء الطلب.");
+        return;
+    }
+
+    const p = allProducts[id];
+    if(!p || p.outOfStock) return;
+
+    if(!cart[id]) cart[id] = {...p, id: id, qty: 0};
+    cart[id].qty++;
+    renderCart();
+    showToast("✓ تمت الإضافة");
+}
+
+function changeQty(id,amount){
+    if(!cart[id]) return;
+    cart[id].qty += amount;
+    if(cart[id].qty<=0) delete cart[id];
+    renderCart();
+}
+
+/* ===== ✅ عرض السلة في الطبقة الجديدة ===== */
+function renderCart(){
+    const items = document.getElementById("cartItems");
+    if(!items) return;
+    items.innerHTML = "";
+
+    let subtotal = 0;
+    let totalCount = 0;
+
+    if(Object.keys(cart).length === 0){
+        items.innerHTML = `
+            <div class="cart-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>
+                </svg>
+                <div style="font-size:16px; font-weight:600; margin-bottom:6px;">السلة فارغة</div>
+                <div style="font-size:13px;">أضف منتجات من القائمة لبدء الطلب</div>
+            </div>
+        `;
+        document.getElementById('checkoutBtn').disabled = true;
+    } else {
+        document.getElementById('checkoutBtn').disabled = false;
+        Object.values(cart).forEach(it=>{
+            subtotal += it.price * it.qty;
+            totalCount += it.qty;
+            items.innerHTML += `
+                <div class="cart-item">
+                    <img class="cart-item-img" src="${it.image || UNIFIED_IMAGE}" alt="${it.name}">
+                    <div class="cart-item-info">
+                        <strong>${it.name}</strong>
+                        <span>${it.price}.00 دينار</span>
+                    </div>
+                    <div class="cart-item-qty">
+                        <button class="qty-btn" onclick="changeQty('${it.id}',1)">+</button>
+                        <span class="qty-value">${it.qty}</span>
+                        <button class="qty-btn" onclick="changeQty('${it.id}',-1)">−</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    document.getElementById('subtotal').textContent = subtotal.toFixed(2) + " دينار";
+    document.getElementById('finalTotal').textContent = subtotal.toFixed(2) + " دينار";
+    document.getElementById('cartItemCount').textContent = totalCount + " منتج";
+
+    updateCartBadge(totalCount);
+}
+
+function updateCartBadge(count) {
+    const badge = document.getElementById('cartBadge');
+    if(badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+/* ===== ✅ فتح/إغلاق طبقة السلة ===== */
+function openCart() {
+    document.getElementById('cartOverlay').classList.add('open');
+    document.getElementById('cartSheet').classList.add('open');
+    setActiveNav('cart');
+}
+
+function closeCartSheet() {
+    document.getElementById('cartOverlay').classList.remove('open');
+    document.getElementById('cartSheet').classList.remove('open');
+    setActiveNav('menu');
+}
+
+/* ===== ✅ بدء عملية الشراء ===== */
+function startCheckout() {
+    if(Object.keys(cart).length === 0) {
+        alert("السلة فارغة! أضف منتجات أولاً.");
+        return;
+    }
+    closeCartSheet();
+    tempCart = JSON.parse(JSON.stringify(cart));
+    checkoutData = { step: 1, orderType: "delivery", selectedLocation: null, locationAddress: "", paymentMethod: null, notes: "" };
+    showCheckoutStep(1);
+}
+
+/* ===== Checkout Steps ===== */
+function showCheckoutStep(step) {
+    checkoutData.step = step;
+    const container = document.getElementById('stepContainer');
+    const stepTitle = document.getElementById('stepTitle');
+    const nextBtn = document.getElementById('nextStepBtn');
+    const backBtn = document.getElementById('backStepBtn');
+    backBtn.style.display = step > 1 ? 'block' : 'none';
+    
+    if(step === 1) {
+        stepTitle.innerText = "الخطوة 1 من 4 - نوع الطلب";
+        container.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:16px;">
+                <div class="payment-option" onclick="selectOrderType('delivery')" id="optDelivery">
+                    <span style="font-size:24px;">🚚</span>
+                    <div><strong>توصيل</strong><br><small>توصيل الطلب إلى عنوانك</small></div>
+                </div>
+                <div class="payment-option" onclick="selectOrderType('takeaway')" id="optTakeaway">
+                    <span style="font-size:24px;">🏪</span>
+                    <div><strong>استلام من المتجر</strong><br><small>قم بالاستلام بنفسك من المتجر</small></div>
+                </div>
+            </div>`;
+        nextBtn.innerText = "التالي";
+        if(checkoutData.orderType === 'delivery') document.getElementById('optDelivery')?.classList.add('selected');
+        else document.getElementById('optTakeaway')?.classList.add('selected');
+    }
+    else if(step === 2) {
+        stepTitle.innerText = "الخطوة 2 من 4 - الموقع";
+        if(checkoutData.orderType === 'delivery') {
+            container.innerHTML = `
+                <p style="margin-bottom:12px; color:var(--muted);">📍 اضغط على الخريطة لتحديد موقعك</p>
+                <div id="map"></div>
+                <div class="location-info" id="locationInfo">${checkoutData.selectedLocation ? '📍 تم تحديد الموقع' : '⚠️ يمكنك تحديد الموقع (اختياري)'}</div>
+                <div class="form-group" style="margin-top:16px;">
+                    <label>📝 ملاحظات إضافية للطلب</label>
+                    <textarea id="orderNotes" rows="3" placeholder="مثال: الطابق الثالث، بجانب المسجد..."></textarea>
+                </div>`;
+            setTimeout(() => initMap(), 300);
+            nextBtn.innerText = "التالي";
+        } else {
+            container.innerHTML = `
+                <div class="form-group">
+                    <label>📝 ملاحظات إضافية للطلب</label>
+                    <textarea id="orderNotes" rows="3" placeholder="مثال: سأستلم الطلب بنفسي..."></textarea>
+                </div>`;
+            nextBtn.innerText = "التالي";
+        }
+    }
+    else if(step === 3) {
+        stepTitle.innerText = "الخطوة 3 من 4 - طريقة الدفع";
+        let methodsHtml = '<div class="payment-methods">';
+        if(Object.keys(allPaymentMethods).length > 0) {
+            Object.keys(allPaymentMethods).forEach((key, idx) => {
+                const m = allPaymentMethods[key];
+                const isSelected = checkoutData.paymentMethod === m.name;
+                methodsHtml += `
+                    <div class="payment-option ${isSelected ? 'selected' : ''}" onclick="selectPaymentMethod('${m.name.replace(/'/g, "\\'")}')" id="pay_${idx}">
+                        <img class="payment-icon" src="${m.icon || ''}" onerror="this.style.display='none'">
+                        <span class="payment-name">${m.name}</span>
+                    </div>`;
+            });
+        } else {
+            methodsHtml += `
+                <div class="payment-option selected" onclick="selectPaymentMethod('نقدي عند الإستلام')" id="pay_0">
+                    <span style="font-size:24px;">💵</span>
+                    <span class="payment-name">نقدي عند الإستلام</span>
+                </div>`;
+            checkoutData.paymentMethod = 'نقدي عند الإستلام';
+        }
+        methodsHtml += '</div>';
+        container.innerHTML = methodsHtml;
+        nextBtn.innerText = "التالي";
+    }
+    else if(step === 4) {
+        stepTitle.innerText = "الخطوة 4 من 4 - تأكيد الطلب";
+        const subtotal = getSubtotal(); 
+        const delivery = getDeliveryPrice(); 
+        const total = getTotal();
+        let itemsHtml = '<div class="items-list">';
+        Object.values(tempCart).forEach(item => { 
+            itemsHtml += `<div class="item-row"><span>${item.qty} × ${item.name}</span><span>${item.price * item.qty} د</span></div>`; 
+        });
+        itemsHtml += '</div>';
+        const orderTypeText = checkoutData.orderType === 'delivery' ? '🚚 توصيل' : '🏪 استلام من المتجر';
+        const paymentText = checkoutData.paymentMethod || 'لم يتم الاختيار';
+        const locationText = checkoutData.locationAddress ? checkoutData.locationAddress.substring(0, 80) : (checkoutData.orderType === 'delivery' ? 'لم يتم تحديد موقع' : 'استلام شخصي');
+        
+        container.innerHTML = `
+            <div class="order-summary-card">
+                <h3 style="margin-bottom:12px;">📋 ملخص الطلب</h3>
+                ${itemsHtml}
+                <div class="summary-row"><span>المجموع الفرعي</span><span>${subtotal} د</span></div>
+                <div class="summary-row"><span>رسوم التوصيل</span><span>${delivery} د</span></div>
+                <div class="summary-row total"><span>الإجمالي</span><span>${total} د</span></div>
+            </div>
+            <div class="order-summary-card">
+                <h3 style="margin-bottom:12px;">ℹ️ معلومات الطلب</h3>
+                <div class="summary-row"><span>نوع الطلب</span><span>${orderTypeText}</span></div>
+                <div class="summary-row"><span>منطقة التوصيل</span><span>${userArea || 'غير محدد'}</span></div>
+                <div class="summary-row"><span>طريقة الدفع</span><span>${paymentText}</span></div>
+                <div class="summary-row"><span>الموقع</span><span style="font-size:12px;">${locationText}</span></div>
+                ${checkoutData.notes ? `<div class="summary-row"><span>ملاحظات</span><span style="font-size:12px;">${checkoutData.notes}</span></div>` : ''}
+            </div>
+            <div class="order-summary-card" style="background:#e8f5e9;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:28px;">📞</span>
+                    <div><strong>رقم الهاتف: ${userPhone}</strong><br><small>سيتم التواصل معك لتأكيد الطلب</small></div>
+                </div>
+            </div>`;
+        nextBtn.innerText = "تأكيد وإرسال الطلب ✅";
+    }
+    document.getElementById('checkoutPanel').style.display = 'flex';
+}
+
+/* ===== ✅ خريطة محسّنة: بنغازي - النواقية، لون أخضر ===== */
+function initMap() {
+    const mapContainer = document.getElementById('map');
+    if(!mapContainer) return;
+    if(map) { map.remove(); map = null; }
+    
+    mapContainer.style.height = "350px";
+    
+    // ✅ إحداثيات منطقة النواقية - بنغازي
+    const benghaziNawagiaLat = 32.0975;
+    const benghaziNawagiaLng = 20.0611;
+    
+    try {
+        map = L.map('map', {
+            zoomControl: true,
+            attributionControl: false
+        }).setView([benghaziNawagiaLat, benghaziNawagiaLng], 14);
+        
+        // ✅ خريطة خضراء باستخدام OpenStreetMap مع فلتر CSS أخضر
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+        
+        // ✅ إضافة فلتر أخضر على طبقة الخريطة
+        osmLayer.getContainer().style.filter = 'hue-rotate(75deg) saturate(0.85) brightness(1.05)';
+        
+        if(marker) map.removeLayer(marker);
+        if(checkoutData.selectedLocation) {
+            marker = L.marker([checkoutData.selectedLocation.lat, checkoutData.selectedLocation.lng], {icon: greenIcon}).addTo(map);
+            map.setView([checkoutData.selectedLocation.lat, checkoutData.selectedLocation.lng], 15);
+        }
+        
+        map.on('click', async (e) => {
+            if(marker) map.removeLayer(marker);
+            marker = L.marker(e.latlng, {icon: greenIcon}).addTo(map);
+            checkoutData.selectedLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+            
+            try {
+                const resp = await fetch(`https://photon.komoot.io/reverse?lon=${e.latlng.lng}&lat=${e.latlng.lat}`);
+                const data = await resp.json();
+                if (data.features && data.features.length > 0) {
+                    const props = data.features[0].properties;
+                    const parts = [props.name, props.street, props.city, props.country].filter(Boolean);
+                    checkoutData.locationAddress = parts.join('، ') || `موقع: ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+                } else {
+                    checkoutData.locationAddress = `موقع محدد: ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+                }
+            } catch(err) {
+                checkoutData.locationAddress = `موقع محدد: ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+            }
+            
+            const infoDiv = document.getElementById('locationInfo');
+            if(infoDiv) infoDiv.innerHTML = `📍 ${checkoutData.locationAddress.substring(0, 100)}`;
+        });
+        
+        setTimeout(() => map.invalidateSize(), 200);
+    } catch(e) { 
+        console.error(e); 
+        mapContainer.innerHTML = '<div style="text-align:center;padding:50px;">⚠️ خطأ بالخريطة، يمكنك المتابعة بدون تحديد</div>'; 
+    }
+}
+
+function selectOrderType(type) { 
+    checkoutData.orderType = type; 
+    document.querySelectorAll('#stepContainer .payment-option').forEach(el => el.classList.remove('selected')); 
+    if(type === 'delivery') document.getElementById('optDelivery')?.classList.add('selected'); 
+    else document.getElementById('optTakeaway')?.classList.add('selected'); 
+}
+
+function selectPaymentMethod(name) { 
+    checkoutData.paymentMethod = name; 
+    document.querySelectorAll('#stepContainer .payment-option').forEach(el => el.classList.remove('selected')); 
+    event.currentTarget.classList.add('selected'); 
+}
+
+function nextStep() {
+    if(checkoutData.step === 1 && !checkoutData.orderType) { alert("يرجى اختيار نوع الطلب"); return; }
+    if(checkoutData.step === 2) { 
+        const notes = document.getElementById('orderNotes')?.value || ''; 
+        checkoutData.notes = notes; 
+    }
+    if(checkoutData.step === 3 && !checkoutData.paymentMethod) { alert("يرجى اختيار طريقة الدفع"); return; }
+    if(checkoutData.step === 4) { placeOrder(); return; }
+    showCheckoutStep(checkoutData.step + 1);
+}
+
+function prevStep() { 
+    if(checkoutData.step > 1) { 
+        showCheckoutStep(checkoutData.step - 1); 
+        if(checkoutData.step === 2 && checkoutData.orderType === 'delivery') setTimeout(() => initMap(), 200); 
+    } 
+}
+
+function closeCheckout() { 
+    document.getElementById('checkoutPanel').style.display = 'none'; 
+    if(map) { map.remove(); map = null; } 
+}
+
+/* ===== Price Calculations ===== */
+function getDeliveryPrice() {
+    if(checkoutData.orderType !== 'delivery') return 0;
+    if(!userArea) return 0;
+    const areaObj = Object.values(allAreas).find(a => a.name === userArea);
+    return areaObj ? (areaObj.price || 0) : 0;
+}
+
+function getSubtotal() { 
+    return Object.values(tempCart).reduce((s,i)=> s + i.price*i.qty,0); 
+}
+
+function getTotal() { 
+    return getSubtotal() + getDeliveryPrice(); 
+}
+
+/* ===== Place Order (إرسال إلى لوحة التحكم فقط) ===== */
+function placeOrder() {
+    const subtotal = getSubtotal(); 
+    const delivery = getDeliveryPrice(); 
+    const finalTotal = getTotal();
+    const orderId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    
+    const orderData = {
+        userPhone, 
+        userArea, 
+        items: tempCart, 
+        subtotal, 
+        delivery, 
+        finalTotal,
+        orderType: checkoutData.orderType, 
+        paymentType: checkoutData.paymentMethod,
+        notes: checkoutData.notes, 
+        location: checkoutData.selectedLocation,
+        locationAddress: checkoutData.locationAddress, 
+        status: 'pending', 
+        statusText: '⏳ قيد الانتظار',
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        googleMapsLink: checkoutData.selectedLocation ? 
+            `https://www.google.com/maps?q=${checkoutData.selectedLocation.lat},${checkoutData.selectedLocation.lng}` : 
+            null
+    };
+    
+    db.ref(`orders/${orderId}`).set(orderData).then(() => {
+        cart = {}; 
+        renderCart(); 
+        closeCheckout();
+        showSuccessMessage();
+        
+        setTimeout(() => { 
+            showOrders(); 
+        }, 2000);
+    }).catch(err => { 
+        alert("حدث خطأ: " + err.message); 
+    });
+}
+
+/* ===== Success Message ===== */
+function showSuccessMessage() {
+    document.getElementById("successMessage").style.display = "flex";
+}
+
+function closeSuccessMessage() {
+    document.getElementById("successMessage").style.display = "none";
+}
+
+/* ===== Navigation ===== */
+function showMenu() {
+    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('ordersContent').style.display = 'none';
+    setActiveNav('menu');
+}
+
+function showOrders() {
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('ordersContent').style.display = 'block';
+    loadUserOrders();
+    setActiveNav('orders');
+}
+
+function setActiveNav(active) {
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    if (active === 'menu') document.getElementById('navMenu').classList.add('active');
+    if (active === 'cart') document.getElementById('navCart').classList.add('active');
+    if (active === 'orders') document.getElementById('navOrders').classList.add('active');
+}
+
+/* ===== Load User Orders ===== */
+function loadUserOrders() {
+    const ordersList = document.getElementById('ordersList');
+    ordersList.innerHTML = '<div style="text-align:center;padding:40px;">جاري تحميل طلباتك...</div>';
+
+    if (!userPhone) {
+        ordersList.innerHTML = `
+            <div style="text-align:center;padding:40px;">
+                <h3>لا توجد طلبات</h3>
+                <p>يرجى تسجيل الدخول لعرض طلباتك</p>
+            </div>
+        `;
+        return;
+    }
+
+    db.ref('orders')
+        .orderByChild('userPhone')
+        .equalTo(userPhone)
+        .once('value', (snapshot) => {
+            const orders = snapshot.val();
+            ordersList.innerHTML = '';
+
+            if (!orders) {
+                ordersList.innerHTML = `
+                    <div style="text-align:center;padding:40px;">
+                        <h3>لا توجد طلبات سابقة</h3>
+                        <p>قم بطلبك الأول الآن!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedOrders = Object.keys(orders)
+                .map(key => ({ id: key, ...orders[key] }))
+                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+            sortedOrders.forEach(order => {
+                const card = createOrderCard(order);
+                ordersList.appendChild(card);
+            });
+        });
+}
+
+/* ===== Cancel Order ===== */
+window.cancelOrder = function(orderId) {
+    if (confirm('هل أنت متأكد من إلغاء هذا الطلب؟')) {
+        db.ref(`orders/${orderId}`).update({
+            status: 'cancelled',
+            statusText: '❌ ملغي',
+            cancelledAt: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            alert('تم إلغاء الطلب بنجاح');
+            loadUserOrders();
+        }).catch(error => {
+            console.error('Error cancelling order:', error);
+            alert('حدث خطأ أثناء إلغاء الطلب');
+        });
+    }
+};
+
+/* ===== ✅ SVG Icons للاستخدام في التتبع ===== */
+const SVG_ICONS = {
+    pending: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    preparing: `<svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+    delivering: `<svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+    delivered: `<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    cancelled: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+    check: `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`
+};
+
+/* ===== ✅ إنشاء بطاقة الطلب مع شريط تتبع كلاسيكي SVG ===== */
+function createOrderCard(order) {
+    const card = document.createElement('div');
+    
+    let cardClass = 'order-card';
+    if (order.status === 'cancelled') {
+        cardClass += ' cancelled';
+    } else {
+        cardClass += ' ' + (order.status || 'pending');
+    }
+    card.className = cardClass;
+
+    const statusMap = {
+        'pending': { text: 'قيد الانتظار', class: 'status-pending', icon: SVG_ICONS.pending, desc: 'تم استلام طلبك وهو في انتظار الموافقة' },
+        'preparing': { text: 'قيد التحضير', class: 'status-preparing', icon: SVG_ICONS.preparing, desc: 'جاري تجهيز طلبك بعناية' },
+        'delivering': { text: 'في الطريق إليك', class: 'status-delivering', icon: SVG_ICONS.delivering, desc: 'طلبك في الطريق إليك الآن' },
+        'delivered': { text: 'تم التسليم', class: 'status-delivered', icon: SVG_ICONS.delivered, desc: 'تم توصيل طلبك بنجاح' },
+        'cancelled': { text: 'ملغي', class: 'status-cancelled', icon: SVG_ICONS.cancelled, desc: 'تم إلغاء هذا الطلب' }
+    };
+    
+    const statusInfo = statusMap[order.status] || statusMap['pending'];
+
+    const date = order.createdAt ? new Date(order.createdAt) : new Date();
+    const timeStr = date.toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = date.toLocaleDateString('ar-LY');
+
+    const itemsList = order.items ? Object.values(order.items).map(item => 
+        `${item.qty} × ${item.name}`
+    ).join('، ') : '';
+
+    const statusOrder = ['pending', 'preparing', 'delivering', 'delivered'];
+    const currentIndex = statusOrder.indexOf(order.status);
+    const progressPercent = currentIndex >= 0 ? (currentIndex / (statusOrder.length - 1)) * 80 : 0;
+
+    let cancelButtonHTML = '';
+    if (order.status !== 'delivered' && order.status !== 'cancelled') {
+        cancelButtonHTML = `
+            <button class="cancel-order-btn" onclick="cancelOrder('${order.id}')">
+                إلغاء الطلب
+            </button>
+        `;
+    }
+
+    // ✅ شريط التتبع الكلاسيكي مع SVG
+    const steps = [
+        { key: 'pending', label: 'قيد الانتظار', icon: SVG_ICONS.pending },
+        { key: 'preparing', label: 'قيد التحضير', icon: SVG_ICONS.preparing },
+        { key: 'delivering', label: 'في الطريق', icon: SVG_ICONS.delivering },
+        { key: 'delivered', label: 'تم التسليم', icon: SVG_ICONS.delivered }
+    ];
+
+    let trackingHTML = '';
+    if (order.status !== 'cancelled') {
+        let stepsHTML = '';
+        steps.forEach((step) => {
+            const stepIndex = statusOrder.indexOf(step.key);
+            const isCompleted = stepIndex < currentIndex;
+            const isCurrent = stepIndex === currentIndex;
+            
+            let dotClass = '';
+            if (isCurrent) dotClass = 'current';
+            else if (isCompleted) dotClass = 'completed';
+            
+            const iconToShow = isCompleted ? SVG_ICONS.check : step.icon;
+            
+            stepsHTML += `
+                <div class="tracking-step-classic">
+                    <div class="step-dot-classic ${dotClass}">
+                        ${iconToShow}
+                    </div>
+                    <div class="step-label-classic ${stepIndex <= currentIndex ? 'active' : ''}">${step.label}</div>
+                </div>
+            `;
+        });
+
+        trackingHTML = `
+            <div class="current-status-banner">
+                <div class="current-status-icon-wrap">
+                    ${statusInfo.icon}
+                </div>
+                <div class="current-status-text">
+                    <h4>${statusInfo.text}</h4>
+                    <p>${statusInfo.desc}</p>
+                </div>
+            </div>
+            <div class="tracking-container">
+                <div class="tracking-bar-classic">
+                    <div class="tracking-line-bg"></div>
+                    <div class="tracking-line-fill" style="width: ${progressPercent}%;"></div>
+                    ${stepsHTML}
+                </div>
+            </div>
+        `;
+    } else {
+        trackingHTML = `
+            <div style="background: #f8d7da; padding: 14px; border-radius: 12px; margin: 12px 0; text-align: center; color: #721c24; font-weight: 600; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                تم إلغاء هذا الطلب
+            </div>
+        `;
+    }
+
+    card.innerHTML = `
+        <div class="order-header">
+            <span class="order-id">طلب #${order.id.slice(-6)}</span>
+            <span class="order-status ${statusInfo.class}">${statusInfo.text}</span>
+        </div>
+        <div class="order-items">
+            <strong>الطلبات:</strong> ${itemsList}
+        </div>
+        <div class="order-total">
+            <span>الإجمالي:</span>
+            <span>${order.finalTotal || 0} دينار</span>
+        </div>
+        ${trackingHTML}
+        <div style="font-size: 12px; color: var(--muted); text-align: left; margin-top: 10px;">
+            🕐 ${timeStr} - 📅 ${dateStr}
+        </div>
+        ${cancelButtonHTML}
+    `;
+
+    return card;
+}
+
+/* ===== Toast ===== */
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast-msg';
+    t.innerText = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+}
+</script>
+</body>
+</html>
